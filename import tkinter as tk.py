@@ -2,21 +2,27 @@ import tkinter as tk
 import threading
 import time
 import itertools
+import string
 
 def brute_force_crack(password):
-  
+    """
+    Brute‑force search over lowercase, uppercase, digits, and punctuation.
+    """
     start_time = time.time()
-    # Allowed characters for brute force (adjust as needed)
-    chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-    length = 1
-    while True:
-        # Iterate over all combinations of the current length
+    # Full character set
+    chars = (
+        string.ascii_lowercase +    # a–z
+        string.ascii_uppercase +    # A–Z
+        string.digits +             # 0–9
+        string.punctuation          # special chars !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+    )
+
+    for length in itertools.count(1):
         for attempt_tuple in itertools.product(chars, repeat=length):
             attempt = ''.join(attempt_tuple)
             if attempt == password:
-                elapsed_time = time.time() - start_time
-                return attempt, elapsed_time
-        length += 1
+                elapsed = time.time() - start_time
+                return attempt, elapsed
 
 def crack_password():
 
