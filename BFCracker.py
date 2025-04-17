@@ -78,19 +78,3 @@ def GenerateCharset(_charcode: int):
         out_charset += low_charset
         _charcode -= 1
     return out_charset
-
-# def main():
-#     password = "cat"
-#     passhash = sha256(password.encode()).digest()
-#     print(f"Password: {password}")
-#     print(f"    Hash: {passhash}")
-#     print()
-#     guesses = -1
-#     crackedpassword, guesses = CrackHashMulti(passhash, 1, 3, GenerateCharset(3), 4)
-#     if crackedpassword is None:
-#         print(f"Password not found in {guesses} guesses")
-#     else:
-#         print(f"Password \"{crackedpassword}\" found in {guesses} guesses")
-
-# if __name__=="__main__":
-#     main()
