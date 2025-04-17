@@ -3,26 +3,28 @@ import threading
 import time
 import itertools
 import string
+import BFCracker
+from hashlib import sha256
 
-def brute_force_crack(password):
-    """
-    Brute‑force search over lowercase, uppercase, digits, and punctuation.
-    """
-    start_time = time.time()
-    # Full character set
-    chars = (
-        string.ascii_lowercase +    # a–z
-        string.ascii_uppercase +    # A–Z
-        string.digits +             # 0–9
-        string.punctuation          # special chars !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
-    )
+# def brute_force_crack(password):
+#     """
+#     Brute‑force search over lowercase, uppercase, digits, and punctuation.
+#     """
+#     start_time = time.time()
+#     # Full character set
+#     chars = (
+#         string.ascii_lowercase +    # a–z
+#         string.ascii_uppercase +    # A–Z
+#         string.digits +             # 0–9
+#         string.punctuation          # special chars !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+#     )
 
-    for length in itertools.count(1):
-        for attempt_tuple in itertools.product(chars, repeat=length):
-            attempt = ''.join(attempt_tuple)
-            if attempt == password:
-                elapsed = time.time() - start_time
-                return attempt, elapsed
+#     for length in itertools.count(1):
+#         for attempt_tuple in itertools.product(chars, repeat=length):
+#             attempt = ''.join(attempt_tuple)
+#             if attempt == password:
+#                 elapsed = time.time() - start_time
+#                 return attempt, elapsed
 
 def crack_password():
 
@@ -30,7 +32,7 @@ def crack_password():
     if not password:
         result_label.config(text="Please enter a password.")
         return
-    
+    password_hash = sha256(password.encode("utf-8")).digest()
     # Reset result and display loader message
     result_label.config(text="")
     loader_label.config(text="Cracking, please wait...")
@@ -38,7 +40,12 @@ def crack_password():
     
     def run_crack():
         # Run the brute force algorithm
-        cracked_password, elapsed = brute_force_crack(password)
+        start_time = time.time()
+        cracked_password, checks = BFCracker.CrackHashMulti(password_hash, 1, 3, BFCracker.GenerateCharset(5), 3)
+        end_time = time.time()
+        elapsed = end_time-start_time
+        if cracked_password is None:
+            print("PASSWORD NOT FOUND")  # NEED TO UPDATE UI IF NO PASSWORD IS FOUND
         # Once done, update the UI on the main thread using 'after'
         def update_ui():
             loader_label.config(text="")
