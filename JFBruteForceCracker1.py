@@ -1,7 +1,6 @@
 import multiprocessing
 import itertools
 from hashlib import sha256
-import multiprocessing.managers
 
 def CrackHash(_passhash: str, _minlen: int, _maxlen: int, _charset: str) -> tuple[str|None, int]:
     chars = _charset
@@ -17,11 +16,15 @@ def CrackHash(_passhash: str, _minlen: int, _maxlen: int, _charset: str) -> tupl
             if guess_hash == tgt_hash:
                 return (guess, guess_count)
     return (None, guess_count)
-
-def BFWorker(_guess: str, _tgthash: str):
+    
+def BFWorker(_guess: str, _tgthash: bytes, found_event: multiprocessing.Event):
+    if found_event.is_set():
+        return None
     guesshash = sha256(_guess.encode()).digest()
     if guesshash == _tgthash:
+        found_event.set()
         return _guess
+
 
 def GuessGenerator(_charset: str, _minlen: int, _maxlen: int, _hash: str):
     for passlen in range(_minlen, _maxlen+1):
@@ -29,18 +32,30 @@ def GuessGenerator(_charset: str, _minlen: int, _maxlen: int, _hash: str):
         for guess in guess_product:
             yield ("".join(guess), _hash)
 
-def CrackHashMulti(_passhash: str, _minlen: int, _maxlen: int, _charset: str, _processnum: int) -> tuple[str|None, int]:
+def CrackHashMulti(_passhash: bytes, _minlen: int, _maxlen: int, _charset: str, _processnum: int) -> tuple[str | None, int]:
     chars = _charset
     guess_gen = GuessGenerator(chars, _minlen, _maxlen, _passhash)
     guess_count = 0
-    with multiprocessing.Pool(processes=_processnum) as pool:
-        for result in pool.starmap_async(BFWorker, guess_gen).get():
-            guess_count += 1
-            print(guess_count)
-            if result is not None:
-                print("Result Found")
-                return (result, guess_count)
+
+    with multiprocessing.Manager() as manager:
+        found_event = manager.Event()
+        with multiprocessing.Pool(processes=_processnum) as pool:
+            results = []
+            for guess, hash_val in guess_gen:
+                if found_event.is_set():
+                    break
+                result = pool.apply_async(BFWorker, args=(guess, hash_val, found_event))
+                results.append(result)
+
+            for result in results:
+                guess_count += 1
+                res = result.get()
+                if res is not None:
+                    print("Result Found")
+                    return (res, guess_count)
+
     return (None, guess_count)
+
 
 def GenerateCharset(_charcode: int):
     '''Takes in a 4 bit integer: 1 uses the subset, 0 doesn't use the subset'''
@@ -67,13 +82,13 @@ def GenerateCharset(_charcode: int):
     return out_charset
 
 def main():
-    password = "c"
+    password = "cat"
     passhash = sha256(password.encode()).digest()
     print(f"Password: {password}")
     print(f"    Hash: {passhash}")
     print()
     guesses = -1
-    crackedpassword, guesses = CrackHashMulti(passhash, 1, 3, GenerateCharset(1), 4)
+    crackedpassword, guesses = CrackHashMulti(passhash, 1, 100, GenerateCharset(1), 4)
     if crackedpassword is None:
         print(f"Password not found in {guesses} guesses")
     else:
