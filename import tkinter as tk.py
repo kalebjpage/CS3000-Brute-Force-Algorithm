@@ -1,84 +1,68 @@
 import tkinter as tk
 import threading
 import time
-import itertools
-import string
-import BFCracker
 from hashlib import sha256
+import BFCracker
 
-# def brute_force_crack(password):
-#     """
-#     Brute‑force search over lowercase, uppercase, digits, and punctuation.
-#     """
-#     start_time = time.time()
-#     # Full character set
-#     chars = (
-#         string.ascii_lowercase +    # a–z
-#         string.ascii_uppercase +    # A–Z
-#         string.digits +             # 0–9
-#         string.punctuation          # special chars !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
-#     )
-
-#     for length in itertools.count(1):
-#         for attempt_tuple in itertools.product(chars, repeat=length):
-#             attempt = ''.join(attempt_tuple)
-#             if attempt == password:
-#                 elapsed = time.time() - start_time
-#                 return attempt, elapsed
-
-def crack_password():
-
-    password = entry.get()
+def crack_password(entry, result_label, loader_label, crack_button):
+    password = entry.get().strip()
     if not password:
         result_label.config(text="Please enter a password.")
         return
+
     password_hash = sha256(password.encode("utf-8")).digest()
-    # Reset result and display loader message
     result_label.config(text="")
     loader_label.config(text="Cracking, please wait...")
     crack_button.config(state=tk.DISABLED)
-    
+
     def run_crack():
-        # Run the brute force algorithm
         start_time = time.time()
-        cracked_password, checks = BFCracker.CrackHashMulti(password_hash, 1, 3, BFCracker.GenerateCharset(5), 3)
-        end_time = time.time()
-        elapsed = end_time-start_time
-        if cracked_password is None:
-            print("PASSWORD NOT FOUND")  # NEED TO UPDATE UI IF NO PASSWORD IS FOUND
-        # Once done, update the UI on the main thread using 'after'
+        cracked_password, guess_count = BFCracker.CrackHashMulti(
+            password_hash,
+            1,
+            3,
+            BFCracker.GenerateCharset(5),  # a-z + A-Z
+            3
+        )
+        elapsed = time.time() - start_time
+
         def update_ui():
+            if cracked_password is None:
+                result_label.config(text=f"❌ Password not found.\nTime: {elapsed:.2f}s\nGuesses: {guess_count}")
+            else:
+                result_label.config(text=f"✅ Password: {cracked_password}\nTime: {elapsed:.2f}s\nGuesses: {guess_count}")
             loader_label.config(text="")
-            result_label.config(text=f"Password: {cracked_password}\nTime Elapsed: {elapsed:.2f} seconds")
             crack_button.config(state=tk.NORMAL)
+
         root.after(0, update_ui)
-    
-    # Start the cracking process in a new thread
+
     threading.Thread(target=run_crack, daemon=True).start()
 
-# Create the main Tkinter window
-root = tk.Tk()
-root.title("Brute Force Password Cracker")
+def main():
+    global root
+    root = tk.Tk()
+    root.title("Simple Brute Force Cracker")
 
-# Create a label for the input
-label = tk.Label(root, text="Enter Password:")
-label.pack(padx=10, pady=10)
+    tk.Label(root, text="🔐 Enter Password:").pack(padx=10, pady=(10, 2))
+    entry = tk.Entry(root)
+    entry.pack(padx=10, pady=5)
 
-# Create an entry widget for user input
-entry = tk.Entry(root)
-entry.pack(padx=10, pady=5)
+    crack_button = tk.Button(
+        root,
+        text="🚀 Crack Password",
+        command=lambda: crack_password(entry, result_label, loader_label, crack_button)
+    )
+    crack_button.pack(pady=10)
 
-# Create a button that starts the cracking process
-crack_button = tk.Button(root, text="Crack", command=crack_password)
-crack_button.pack(padx=10, pady=5)
+    loader_label = tk.Label(root, text="")
+    loader_label.pack()
 
-# Create a label to show a loader message while cracking is in progress
-loader_label = tk.Label(root, text="")
-loader_label.pack(padx=10, pady=5)
+    result_label = tk.Label(root, text="", justify="center")
+    result_label.pack(padx=10, pady=10)
 
-# Create a label to display the final result
-result_label = tk.Label(root, text="")
-result_label.pack(padx=10, pady=5)
+    root.mainloop()
 
-
-root.mainloop()
+if __name__ == "__main__":
+    from multiprocessing import freeze_support
+    freeze_support()
+    main()
